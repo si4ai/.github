@@ -13,22 +13,22 @@ si4ai repo. Repos call these workflows; they do not copy them.
 | `tools/` | The scripts the workflows run. |
 | `tests/` | Fixture tests for those scripts; `ci.yml` runs them. |
 
-The scripts are byte-identical copies, except `tools/check_pr_text.py`
-and `tools/check_pack.py`.
-Until the source repos call these workflows themselves, fix a script
-upstream first, then copy it here.
+`tools/check_pr_text.py` and `tools/check_validator_pass.py` live only
+here: the-mill calls these workflows and runs its tests against this
+copy at the pin (the-mill card 1336, PR #535 onto `release/0.8.19`). The other scripts are still copies.
+Fix one of those upstream first, then copy it here.
 
-Both diverge from the-mill `2c8e08e7` until the upstream fix (the-mill
-card 1334) lands: in `tools/check_pr_text.py` the name-token rule skips
-only dependabot-authored titles and bodies, not every bot account, and
-`tools/check_pack.py` adds `cursor` to the desk-word allowlist.
+`tools/check_pack.py`, `tools/docs_only.py` and `tools/hygiene_words.txt`
+match the-mill `release/0.8.19` (`5112bf7c`), which has `cursor` on the
+desk-word allowlist. The-mill main gets that when the release lands.
 
 | File | Copied from | sha256 |
 | --- | --- | --- |
-| `tools/check_pr_text.py` | the-mill `2c8e08e7`, plus the dependabot-only skip (exact `dependabot[bot]` login) | `78105dd3...` |
-| `tools/check_pack.py` | the-mill `2c8e08e7`, plus `cursor` on the desk-word allowlist | `b4d0ce28...` |
-| `tools/docs_only.py` | the-mill `2c8e08e7` | `e6863fc3...` |
-| `tools/hygiene_words.txt` | the-mill `2c8e08e7` | `e9bff478...` |
+| `tools/check_pr_text.py` | lives here; moved from the-mill (card 1336) | `78105dd3...` |
+| `tools/check_validator_pass.py` | lives here; moved from the-mill (card 1336) | `3e5bb9aa...` |
+| `tools/check_pack.py` | the-mill `5112bf7c` | `b4d0ce28...` |
+| `tools/docs_only.py` | the-mill `5112bf7c` | `e6863fc3...` |
+| `tools/hygiene_words.txt` | the-mill `5112bf7c` | `e9bff478...` |
 | `tools/check_hygiene.py` | repo-context-optimizer `4570220d` | `f2b8ec7d...` |
 
 ## Turn on the shared checks in a new public repo

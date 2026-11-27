@@ -10,8 +10,11 @@ pinned `actions/checkout` and `github/codeql-action` shas. Two inputs:
   swaps two stock clear-text queries for its own pack; those queries stay
   in the-mill.
 
-Where it runs today: the-mill's own `codeql.yml`; `analyze (python)` and
-`analyze (actions)` are required checks there. repo-context-optimizer
+Where it runs today: the-mill's `codeql.yml` calls it from job `analyze`
+(card 1336), so its checks are `analyze / analyze (python)` and
+`analyze / analyze (actions)`. The-mill's main ruleset requires
+`analyze (python)` and `analyze (actions)` today; those names change
+with the call. repo-context-optimizer
 has no CodeQL yet.
 
 A caller adds `.github/workflows/codeql.yml`:
