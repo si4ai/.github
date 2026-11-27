@@ -1,0 +1,18 @@
+{
+  "action": "opened",
+  "pull_request": {
+    "number": 7,
+    "title": "Add the shared checks",
+    "body": "## Brief\nAdd the shared checks.\n\nThe fix came from the human last week.\n\n## Changelog\nShared checks.\n",
+    "user": {
+      "login": "si4ai-builder",
+      "type": "User"
+    },
+    "base": {
+      "sha": "0000000000000000000000000000000000000000"
+    },
+    "head": {
+      "sha": "1111111111111111111111111111111111111111"
+    }
+  }
+}

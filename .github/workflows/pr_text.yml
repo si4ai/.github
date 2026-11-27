@@ -1,0 +1,76 @@
+# Shared PR and issue text hygiene, called by si4ai public repos.
+# Port of the-mill .github/workflows/pr_text.yml (cards #723, #823). The
+# scripts under tools/ are copies of the-mill's; check_pr_text.py narrows the
+# bot skip to dependabot and check_pack.py allows cursor, until that fix
+# lands upstream. See README.md.
+#
+# GitHub keeps every revision of a PR or issue body in its edit history, so
+# text is scanned when it is posted or edited, plus a daily sweep. The text
+# is untrusted input: tools/check_pr_text.py reads it from the event JSON
+# file or the API. No workflow expression puts event text into a shell line.
+#
+# How the scripts find the caller: check_pack.py takes its repo root from
+# its own file path (parents[1]). The tools folder is moved to
+# .si4ai-tools/ at the top of the caller checkout, so that root is the
+# caller repo: the ordinary-word list comes from the caller's tree and the
+# docs-only diff runs in the caller's history, as it does in the-mill.
+#
+# The caller sets the triggers and grants the permissions (see README.md):
+# contents: read for the event job, plus issues: read and
+# pull-requests: read for the sweep. No secrets, nothing installed.
+name: pr_text
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  event:
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # The caller: default branch for comment events, the PR merge commit
+      # for PR events. Full history so the docs-only exemption can diff.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # This repo at the exact commit the caller pinned in its uses: line.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .si4ai-github
+          persist-credentials: false
+          sparse-checkout: tools
+      - run: mv .si4ai-github/tools .si4ai-tools
+      - run: python3 .si4ai-tools/check_pr_text.py event
+
+  sweep:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .si4ai-github
+          persist-credentials: false
+          sparse-checkout: tools
+      - run: mv .si4ai-github/tools .si4ai-tools
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 .si4ai-tools/check_pr_text.py sweep

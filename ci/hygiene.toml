@@ -1,0 +1,7 @@
+# This repo's own hygiene settings, read by tools/check_hygiene.py when
+# ci.yml calls hygiene.yml here. tools/hygiene_words.txt is the-mill's list,
+# used by check_pack.py for pr_text; this repo's prose uses its own list.
+roles = ["auditor", "builder", "validator", "desk", "gardener"]
+words_file = "ci/hygiene_words.txt"
+# Ordinary words this repo's prose uses title-cased, on top of words_file.
+words = ["block", "copied", "fails", "heading", "link", "org", "planned", "releases", "reusable", "risks", "turn"]

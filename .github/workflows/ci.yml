@@ -1,0 +1,30 @@
+# CI for this repo: the fixture tests for the shared scripts, and this
+# repo calling its own hygiene workflow the way a caller repo does.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -v
+
+  hygiene:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/hygiene.yml

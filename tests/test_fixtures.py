@@ -1,0 +1,171 @@
+"""Fixture checks for the shared scripts in tools/ (standard library only).
+
+Run: python3 -m unittest discover -s tests -v
+
+A PR body with a made-up personal name fails pr_text and shows up in the
+hygiene report; a clean body passes both. The hygiene report exits 0 on a
+finding unless --strict is given.
+"""
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+TOOLS = HERE.parent / "tools"
+FIX = HERE / "fixtures"
+
+
+def pr_text(event: Path) -> subprocess.CompletedProcess:
+    env = dict(os.environ, GITHUB_EVENT_NAME="pull_request", GITHUB_EVENT_PATH=str(event))
+    return subprocess.run(
+        [sys.executable, str(TOOLS / "check_pr_text.py"), "event"],
+        env=env, capture_output=True, text=True, timeout=120,
+    )
+
+
+def git(root: Path, *args: str) -> str:
+    env = dict(os.environ, GIT_AUTHOR_NAME="ci", GIT_AUTHOR_EMAIL="ci@example.com",
+               GIT_COMMITTER_NAME="ci", GIT_COMMITTER_EMAIL="ci@example.com")
+    return subprocess.run(["git", *args], cwd=root, env=env, check=True,
+                          capture_output=True, text=True).stdout.strip()
+
+
+class PrTextFixtures(unittest.TestCase):
+    def test_name_token_fails(self):
+        r = pr_text(FIX / "pr_name.json")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("PR #7 body:4: personal name token", r.stderr)
+        self.assertNotIn("Zorblat", r.stdout + r.stderr)
+
+    def test_clean_passes(self):
+        r = pr_text(FIX / "pr_clean.json")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("pr-text hygiene ok", r.stdout)
+
+
+def pr_event(action: str, body: str, login: str, typ: str) -> dict:
+    return {"action": action, "pull_request": {
+        "number": 84, "title": "Rewrite the layer 3 section", "body": body,
+        "user": {"login": login, "type": typ},
+        "base": {"sha": "0" * 40}, "head": {"sha": "1" * 40}}}
+
+
+NAME_BODY = "## Brief\nAdd the shared checks.\n\nThe fix came from Zorblat Quenwick last week.\n"
+CLEAN_BODY = "## Brief\nAdd the shared checks.\n\nThe fix came from the human last week.\n"
+
+
+class BotAuthorFixtures(unittest.TestCase):
+    """Validator F1: a desk-bot body is scanned; only dependabot skips the name rule."""
+
+    def run_event(self, event: dict) -> subprocess.CompletedProcess:
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            ev = Path(d) / "event.json"
+            ev.write_text(json.dumps(event), encoding="utf-8")
+            return pr_text(ev)
+
+    def test_desk_bot_name_body_fails_opened_and_edited(self):
+        for action in ("opened", "edited"):
+            r = self.run_event(pr_event(action, NAME_BODY, "si4ai-auditor[bot]", "Bot"))
+            self.assertEqual(r.returncode, 1, action + r.stdout + r.stderr)
+            self.assertIn("PR #84 body:4: personal name token", r.stderr)
+            self.assertNotIn("name-token rule skipped", r.stdout)
+
+    def test_desk_bot_clean_body_passes(self):
+        r = self.run_event(pr_event("opened", CLEAN_BODY, "si4ai-builder[bot]", "Bot"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_user_name_body_fails(self):
+        r = self.run_event(pr_event("opened", NAME_BODY, "someone", "User"))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+
+    def test_dependabot_name_body_skipped(self):
+        r = self.run_event(pr_event("opened", NAME_BODY, "dependabot[bot]", "Bot"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("name-token rule skipped: dependabot-authored body", r.stdout)
+
+    def test_user_named_like_dependabot_is_scanned(self):
+        r = self.run_event(pr_event("opened", NAME_BODY, "dependabot-fan", "User"))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+
+
+    def test_mid_line_cursor_passes(self):
+        """The human's call: Cursor is on the desk-word allowlist, so it passes mid-line."""
+        body = "## Brief\nAdd the shared checks.\n\nThe guide covers Cursor and the cloud agents.\n"
+        r = self.run_event(pr_event("opened", body, "si4ai-builder[bot]", "Bot"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_other_mid_line_capitalized_word_fails(self):
+        """Only Cursor was added: another capitalized word mid-line still fails, code span or not."""
+        tool = "W" + "indsurf"  # joined so the hygiene report on this file stays clean
+        body = "## Brief\nAdd the shared checks.\n\nThe guide covers " + tool + " and the cloud agents.\n"
+        r = self.run_event(pr_event("opened", body, "si4ai-builder[bot]", "Bot"))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("PR #84 body:4: personal name token", r.stderr)
+        span = body.replace(tool, "`" + tool + "`")
+        r = self.run_event(pr_event("opened", span, "si4ai-builder[bot]", "Bot"))
+        self.assertEqual(r.returncode, 1, "code span: " + r.stdout + r.stderr)
+
+class TemplateFixture(unittest.TestCase):
+    def test_org_template_passes_pr_text(self):
+        import json
+        body = (HERE.parent / ".github" / "pull_request_template.md").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as d:
+            ev = Path(d) / "event.json"
+            ev.write_text(json.dumps({"pull_request": {
+                "number": 1, "title": "Add the shared checks", "body": body,
+                "user": {"login": "ci", "type": "User"},
+                "base": {"sha": "0" * 40}, "head": {"sha": "1" * 40}}}), encoding="utf-8")
+            r = pr_text(ev)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+class HygieneFixtures(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        git(self.root, "init", "-q")
+        # The tree is the ordinary-word list: a word used lower-case here is prose.
+        (self.root / "a.txt").write_text("add the shared checks; brief\n", encoding="utf-8")
+        # Heading words a caller allows mid-line go in its words file.
+        (self.root / "tools").mkdir()
+        (self.root / "tools" / "hygiene_words.txt").write_text("brief\nchangelog\n", encoding="utf-8")
+        git(self.root, "add", "a.txt", "tools/hygiene_words.txt")
+        git(self.root, "commit", "-q", "-m", "first")
+        self.base = git(self.root, "rev-parse", "HEAD")
+        (self.root / "a.txt").write_text("add the shared checks; brief\ntwo\n", encoding="utf-8")
+        git(self.root, "commit", "-q", "-am", "second")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_hygiene(self, event: Path, *extra: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, str(TOOLS / "check_hygiene.py"), "--root", str(self.root),
+             "--base", self.base, "--head", "HEAD", "--event", str(event), *extra],
+            capture_output=True, text=True, timeout=120,
+        )
+
+    def test_name_token_reported_not_gated(self):
+        r = self.run_hygiene(FIX / "pr_name.json")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("in PR body", r.stdout)
+        self.assertNotIn("Zorblat", r.stdout + r.stderr)
+
+    def test_name_token_strict_fails(self):
+        r = self.run_hygiene(FIX / "pr_name.json", "--strict")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+
+    def test_clean_passes_strict(self):
+        r = self.run_hygiene(FIX / "pr_clean.json", "--strict")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("no findings.", r.stdout)
+
+
+if __name__ == "__main__":
+    unittest.main()
