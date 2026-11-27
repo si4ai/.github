@@ -1,0 +1,91 @@
+# Shared hidden-code report, which carries the action-pin check, called by
+# si4ai public repos. Port of the hidden_code_report job in
+# repo-context-optimizer's ci.yml. tools/check_hidden_code.py is a
+# byte-identical copy of that repo's script; see docs/hidden-code.md.
+#
+# The control-plane section (4) of the report lists every added `uses:` line
+# under .github/** that is not pinned to a 40-hex sha, local or docker
+# actions, new actions, permission edits, secret reads and the
+# pull-request-target trigger. The other sections cover unmapped executables,
+# import-time hooks, obfuscation and lock-file provenance.
+#
+# Report only by default: strict is false, so findings print and the job
+# still passes, as in repo-context-optimizer and the-mill today. strict:
+# true exits 1 on any finding in any section. A git failure fails the job
+# either way. The caller's optional ci/hidden-code.toml and its
+# ci/test-select.toml map are read from the caller's tree. Git only,
+# standard library only: no install, no network, no stored keys.
+name: hidden_code
+
+on:
+  workflow_call:
+    inputs:
+      strict:
+        description: "Fail the job when there are findings (default: report only)"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  hidden_code_report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # This repo at the exact commit the caller pinned in its uses: line.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .si4ai-github
+          persist-credentials: false
+          sparse-checkout: tools
+      - env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          MQ_BASE: ${{ github.event.merge_group.base_sha }}
+          MQ_HEAD: ${{ github.event.merge_group.head_sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_SHA: ${{ github.sha }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          STRICT: ${{ inputs.strict }}
+        run: |
+          set -euo pipefail
+          base=""
+          head="$PUSH_SHA"
+          case "$EVENT_NAME" in
+            pull_request)
+              head="$PR_HEAD"
+              base=$(git merge-base "$PR_BASE" "$PR_HEAD" 2>/dev/null || echo "$PR_BASE")
+              ;;
+            merge_group)
+              base="$MQ_BASE"
+              head="$MQ_HEAD"
+              ;;
+            push)
+              base="$PUSH_BEFORE"
+              ;;
+          esac
+          if ! git cat-file -e "${base:-missing}^{commit}" 2>/dev/null; then
+            base=$(git rev-parse --verify --quiet "$head^1" || true)
+            echo "No usable base for this event; scanning the last commit against its first parent."
+          fi
+          if [ -z "$base" ]; then
+            echo "Root commit, nothing to compare: no hidden-code report."
+            exit 0
+          fi
+          strict_args=()
+          if [ "$STRICT" = "true" ]; then
+            strict_args=(--strict)
+          fi
+          python3 .si4ai-github/tools/check_hidden_code.py --root . --base "$base" --head "$head" --author "${PR_AUTHOR:-$GITHUB_ACTOR}" "${strict_args[@]}"

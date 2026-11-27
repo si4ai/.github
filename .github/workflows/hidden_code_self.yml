@@ -1,0 +1,17 @@
+# This repo's own hidden-code report, called the way a caller repo does.
+name: hidden_code
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  hidden_code:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/hidden_code.yml
