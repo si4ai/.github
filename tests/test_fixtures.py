@@ -89,6 +89,14 @@ class BotAuthorFixtures(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("name-token rule skipped: dependabot-authored body", r.stdout)
 
+    def test_dependabot_lookalike_bot_is_scanned(self):
+        """Validator W2: only the exact dependabot[bot] login skips the name rule."""
+        for login in ("dependabot-preview[bot]", "dependabot-fan[bot]", "Dependabot[bot]"):
+            r = self.run_event(pr_event("opened", NAME_BODY, login, "Bot"))
+            self.assertEqual(r.returncode, 1, login + r.stdout + r.stderr)
+            self.assertIn("PR #84 body:4: personal name token", r.stderr)
+            self.assertNotIn("name-token rule skipped", r.stdout)
+
     def test_user_named_like_dependabot_is_scanned(self):
         r = self.run_event(pr_event("opened", NAME_BODY, "dependabot-fan", "User"))
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)

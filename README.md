@@ -25,7 +25,7 @@ only dependabot-authored titles and bodies, not every bot account, and
 
 | File | Copied from | sha256 |
 | --- | --- | --- |
-| `tools/check_pr_text.py` | the-mill `2c8e08e7`, plus the dependabot-only skip | `b2478f97...` |
+| `tools/check_pr_text.py` | the-mill `2c8e08e7`, plus the dependabot-only skip (exact `dependabot[bot]` login) | `78105dd3...` |
 | `tools/check_pack.py` | the-mill `2c8e08e7`, plus `cursor` on the desk-word allowlist | `b4d0ce28...` |
 | `tools/docs_only.py` | the-mill `2c8e08e7` | `e6863fc3...` |
 | `tools/hygiene_words.txt` | the-mill `2c8e08e7` | `e9bff478...` |
