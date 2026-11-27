@@ -1,7 +1,8 @@
 # Shared PR and issue text hygiene, called by si4ai public repos.
 # Port of the-mill .github/workflows/pr_text.yml (cards #723, #823). The
 # scripts under tools/ are copies of the-mill's; check_pr_text.py narrows the
-# bot skip to dependabot until that fix lands upstream. See README.md.
+# bot skip to dependabot and check_pack.py allows cursor, until that fix
+# lands upstream. See README.md.
 #
 # GitHub keeps every revision of a PR or issue body in its edit history, so
 # text is scanned when it is posted or edited, plus a daily sweep. The text

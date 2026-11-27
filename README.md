@@ -13,18 +13,20 @@ si4ai repo. Repos call these workflows; they do not copy them.
 | `tools/` | The scripts the workflows run. |
 | `tests/` | Fixture tests for those scripts; `ci.yml` runs them. |
 
-The scripts are byte-identical copies, except `tools/check_pr_text.py`.
+The scripts are byte-identical copies, except `tools/check_pr_text.py`
+and `tools/check_pack.py`.
 Until the source repos call these workflows themselves, fix a script
 upstream first, then copy it here.
 
-`tools/check_pr_text.py` diverges from the-mill `2c8e08e7` until the
-upstream fix lands on the-mill: the name-token rule skips only
-dependabot-authored titles and bodies, not every bot account.
+Both diverge from the-mill `2c8e08e7` until the upstream fix (the-mill
+card 1334) lands: in `tools/check_pr_text.py` the name-token rule skips
+only dependabot-authored titles and bodies, not every bot account, and
+`tools/check_pack.py` adds `cursor` to the desk-word allowlist.
 
 | File | Copied from | sha256 |
 | --- | --- | --- |
 | `tools/check_pr_text.py` | the-mill `2c8e08e7`, plus the dependabot-only skip | `b2478f97...` |
-| `tools/check_pack.py` | the-mill `2c8e08e7` | `f5d25a21...` |
+| `tools/check_pack.py` | the-mill `2c8e08e7`, plus `cursor` on the desk-word allowlist | `b4d0ce28...` |
 | `tools/docs_only.py` | the-mill `2c8e08e7` | `e6863fc3...` |
 | `tools/hygiene_words.txt` | the-mill `2c8e08e7` | `e9bff478...` |
 | `tools/check_hygiene.py` | repo-context-optimizer `4570220d` | `f2b8ec7d...` |

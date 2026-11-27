@@ -94,6 +94,23 @@ class BotAuthorFixtures(unittest.TestCase):
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
 
 
+    def test_mid_line_cursor_passes(self):
+        """The human's call: Cursor is on the desk-word allowlist, so it passes mid-line."""
+        body = "## Brief\nAdd the shared checks.\n\nThe guide covers Cursor and the cloud agents.\n"
+        r = self.run_event(pr_event("opened", body, "si4ai-builder[bot]", "Bot"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_other_mid_line_capitalized_word_fails(self):
+        """Only Cursor was added: another capitalized word mid-line still fails, code span or not."""
+        tool = "W" + "indsurf"  # joined so the hygiene report on this file stays clean
+        body = "## Brief\nAdd the shared checks.\n\nThe guide covers " + tool + " and the cloud agents.\n"
+        r = self.run_event(pr_event("opened", body, "si4ai-builder[bot]", "Bot"))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("PR #84 body:4: personal name token", r.stderr)
+        span = body.replace(tool, "`" + tool + "`")
+        r = self.run_event(pr_event("opened", span, "si4ai-builder[bot]", "Bot"))
+        self.assertEqual(r.returncode, 1, "code span: " + r.stdout + r.stderr)
+
 class TemplateFixture(unittest.TestCase):
     def test_org_template_passes_pr_text(self):
         import json
