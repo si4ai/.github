@@ -1,0 +1,11 @@
+# Version updates for this repo, weekly. It holds no Python packages, so
+# only the github-actions pins (checkout, codeql-action) are updated.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
