@@ -1,0 +1,22 @@
+# This repo's own validator gate, called the way a caller repo does.
+name: validator
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validator-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  validator:
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: read
+    uses: ./.github/workflows/validator.yml

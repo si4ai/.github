@@ -1,0 +1,42 @@
+# Shared validator gate, called by si4ai public repos. Port of the-mill's
+# .github/workflows/validator.yml (#810, F110). tools/check_validator_pass.py
+# is a byte-identical copy of the-mill's script; see docs/validator-pass.md.
+#
+# On merge_group it passes only when every PR in the queue entry has a
+# `validator` success status on its head sha, posted by the
+# si4ai-validator app (login and type checked, #811, F111). On pull_request
+# it reports the state and passes, so a PR can wait for its pass without a
+# red check. The caller requires validator_pass, or the validator status
+# itself, so the merge queue enforces the verdict.
+#
+# The caller sets the triggers and grants contents: read,
+# pull-requests: read and statuses: read. No secrets, nothing installed.
+name: validator
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validator_pass:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: read
+    steps:
+      # This repo at the exact commit the caller pinned in its uses: line.
+      # The script reads only the event and the API, not the caller's tree.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .si4ai-github
+          persist-credentials: false
+          sparse-checkout: tools
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 .si4ai-github/tools/check_validator_pass.py
