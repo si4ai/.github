@@ -5,8 +5,8 @@
 #
 # The control-plane section (4) of the report lists every added `uses:` line
 # under .github/** that is not pinned to a 40-hex sha, local or docker
-# actions, new actions, permission edits, secrets reads and
-# pull_request_target. The other sections cover unmapped executables,
+# actions, new actions, permission edits, secret reads and the
+# pull-request-target trigger. The other sections cover unmapped executables,
 # import-time hooks, obfuscation and lock-file provenance.
 #
 # Report only by default: strict is false, so findings print and the job
@@ -14,7 +14,7 @@
 # true exits 1 on any finding in any section. A git failure fails the job
 # either way. The caller's optional ci/hidden-code.toml and its
 # ci/test-select.toml map are read from the caller's tree. Git only,
-# standard library only: no install, no network, no secrets.
+# standard library only: no install, no network, no stored keys.
 name: hidden_code
 
 on:
