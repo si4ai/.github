@@ -1,0 +1,51 @@
+# Shared CodeQL code scanning (free on public repos), called by si4ai
+# public repos. Port of the-mill's .github/workflows/codeql.yml: the same
+# analyze job, matrix and pinned actions, with the languages and the
+# config file as inputs. See docs/codeql.md.
+#
+# The caller sets the triggers (push to main, pull_request, merge_group if
+# analyze is required, a weekly schedule) and grants contents: read and
+# security-events: write. A repo with its own queries keeps them in its
+# tree and passes config-file, as the-mill does.
+name: codeql
+
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: 'JSON list of CodeQL languages, for example ["python", "actions"]'
+        type: string
+        required: false
+        default: '["python", "actions"]'
+      config-file:
+        description: "Path in the caller's tree to a CodeQL config file; empty for the default queries"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(inputs.languages) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config-file: ${{ inputs.config-file }}
+      - uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
+        with:
+          category: /language:${{ matrix.language }}

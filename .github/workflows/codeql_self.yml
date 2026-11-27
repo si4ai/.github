@@ -1,0 +1,25 @@
+# This repo's own CodeQL scan, called the way a caller repo does.
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  codeql:
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/codeql.yml
