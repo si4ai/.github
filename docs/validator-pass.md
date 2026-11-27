@@ -1,8 +1,8 @@
 # The validator gate
 
-`.github/workflows/validator.yml` runs `tools/check_validator_pass.py`, a
-byte-identical copy of the-mill's script (`2c8e08e7`, sha256
-`3e5bb9aa...`). It trusts one creator: the si4ai-validator app
+`.github/workflows/validator.yml` runs `tools/check_validator_pass.py`
+(sha256 `3e5bb9aa...`). The script lives here; the-mill calls this
+workflow (card 1336). It trusts one creator: the si4ai-validator app
 (`si4ai-validator[bot]`, type Bot). A `validator` status from anyone else
 counts as neither pass nor fail.
 
@@ -11,8 +11,9 @@ counts as neither pass nor fail.
 - pull_request: reports WAITING or REPORT and passes, so a PR can wait
   for its verdict without a red check.
 
-Where it runs today: the-mill's own `validator.yml`, job
-`validator_pass`. The-mill's main ruleset requires the `validator`
+Where it runs today: the-mill's `validator.yml` calls it from job
+`validator_pass`, so the check is `validator_pass / validator_pass`
+(card 1336). The-mill's main ruleset requires the `validator`
 status itself (posted by the app), not `validator_pass`. repo-context-optimizer's
 `validator.yml` holds different, repo-specific jobs (`readme_ledger`,
 `config_tamper`); those stay in that repo.
