@@ -119,9 +119,14 @@ Each repo keeps its own release flow for now:
 The Python build, tag and PyPI release moves here only when a third repo
 needs it. Non-Python repos will not call it.
 
-## Planned
+## Shared checks, one page each
 
-Next shared checks, each in its own PR: the action-pin check (full 40-hex
-sha pins), the validator merge-gate status workflow, CodeQL, and a shared
-Dependabot config template. Test suites, readme ledger and claims, RCO
-pack checks and the-mill SQL tests stay in each repo.
+Each has its own page under `docs/`:
+
+- `docs/hidden-code.md`: the hidden-code report with the action-pin check.
+- `docs/validator-pass.md`: the validator gate for the merge queue.
+- `docs/codeql.md`: CodeQL code scanning.
+- `docs/dependabot.md`: the Dependabot template and how a repo adopts it.
+
+Test suites, readme ledger and claims, RCO pack checks and the-mill SQL
+tests stay in each repo.
