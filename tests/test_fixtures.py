@@ -48,6 +48,52 @@ class PrTextFixtures(unittest.TestCase):
         self.assertIn("pr-text hygiene ok", r.stdout)
 
 
+def pr_event(action: str, body: str, login: str, typ: str) -> dict:
+    return {"action": action, "pull_request": {
+        "number": 84, "title": "Rewrite the layer 3 section", "body": body,
+        "user": {"login": login, "type": typ},
+        "base": {"sha": "0" * 40}, "head": {"sha": "1" * 40}}}
+
+
+NAME_BODY = "## Brief\nAdd the shared checks.\n\nThe fix came from Zorblat Quenwick last week.\n"
+CLEAN_BODY = "## Brief\nAdd the shared checks.\n\nThe fix came from the human last week.\n"
+
+
+class BotAuthorFixtures(unittest.TestCase):
+    """Validator F1: a desk-bot body is scanned; only dependabot skips the name rule."""
+
+    def run_event(self, event: dict) -> subprocess.CompletedProcess:
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            ev = Path(d) / "event.json"
+            ev.write_text(json.dumps(event), encoding="utf-8")
+            return pr_text(ev)
+
+    def test_desk_bot_name_body_fails_opened_and_edited(self):
+        for action in ("opened", "edited"):
+            r = self.run_event(pr_event(action, NAME_BODY, "si4ai-auditor[bot]", "Bot"))
+            self.assertEqual(r.returncode, 1, action + r.stdout + r.stderr)
+            self.assertIn("PR #84 body:4: personal name token", r.stderr)
+            self.assertNotIn("name-token rule skipped", r.stdout)
+
+    def test_desk_bot_clean_body_passes(self):
+        r = self.run_event(pr_event("opened", CLEAN_BODY, "si4ai-builder[bot]", "Bot"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_user_name_body_fails(self):
+        r = self.run_event(pr_event("opened", NAME_BODY, "someone", "User"))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+
+    def test_dependabot_name_body_skipped(self):
+        r = self.run_event(pr_event("opened", NAME_BODY, "dependabot[bot]", "Bot"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("name-token rule skipped: dependabot-authored body", r.stdout)
+
+    def test_user_named_like_dependabot_is_scanned(self):
+        r = self.run_event(pr_event("opened", NAME_BODY, "dependabot-fan", "User"))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+
+
 class TemplateFixture(unittest.TestCase):
     def test_org_template_passes_pr_text(self):
         import json
