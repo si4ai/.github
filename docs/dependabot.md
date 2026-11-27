@@ -14,8 +14,8 @@ To adopt it in a repo:
 2. Drop the pip entry if the repo has no Python packages; add one entry
    per extra manifest folder (the-mill adds `/tools/ci-lock`, an npm
    folder and a docker folder).
-3. Turn on Dependabot security updates in the repo settings (Settings,
-   Code security). Only a repo admin can do that.
+3. Turn on dependabot security updates in the repo settings, under code
+   security. Only a repo admin can do that.
 
 The github-actions entry also bumps the `si4ai/.github` pins in caller
 workflows, since a reusable workflow ref is updated like an action.
